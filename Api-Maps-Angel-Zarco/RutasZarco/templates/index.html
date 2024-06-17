@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps ByZarco</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: hsl(247, 55%, 41%);
+            margin: 0;
+            padding: 0;
+            color: #333;
+            overflow-y: scroll;
+        }
+
+        h1 {
+            text-align: center;
+            color: #004d40;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 1.1em;
+            color: #004d40;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            width: 200px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #392fcd;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #110a6a;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .info {
+            margin-top: 20px;
+        }
+
+        .info p {
+            font-size: 1.1em;
+            color: #666;
+        }
+
+        .info p span {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+    <script>
+        let map, directionsService, directionsRenderer;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 5,
+                center: { lat: 23.6345, lng: -102.5528 }
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+        }
+
+        function trazarRuta(coordenadasRuta, nodosIntermedios, distancia) {
+            const waypoints = coordenadasRuta.slice(1, -1).map(coord => ({
+                location: { lat: coord[0], lng: coord[1] },
+                stopover: true
+            }));
+
+            const origen = coordenadasRuta[0];
+            const destino = coordenadasRuta[coordenadasRuta.length - 1];
+
+            const request = {
+                origin: { lat: origen[0], lng: origen[1] },
+                destination: { lat: destino[0], lng: destino[1] },
+                waypoints: waypoints,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    directionsRenderer.setDirections(result);
+
+                    let totalDistance = 0;
+                    result.routes[0].legs.forEach(leg => {
+                        totalDistance += leg.distance.value;
+                    });
+                    const distanceInKm = (totalDistance / 1000).toFixed(2);
+
+                    mostrarInfoRuta(nodosIntermedios, distanceInKm);
+                } else {
+                    alert('Error al obtener la ruta: ' + status);
+                }
+            });
+        }
+
+        function mostrarInfoRuta(nodosIntermedios, distancia) {
+            const existingInfoDiv = document.querySelector('.info');
+            if (existingInfoDiv) {
+                existingInfoDiv.remove();
+            }
+        
+            const infoDiv = document.createElement('div');
+            infoDiv.classList.add('info');
+        
+            const infoText = `<p>Ciudades: <span>${nodosIntermedios}</span></p>
+                              <p>Distancia total: <span>${distancia}</span> km</p>`;
+        
+            infoDiv.innerHTML = infoText;
+            document.getElementById('map').insertAdjacentElement('afterend', infoDiv);
+        }
+        
+
+        function obtenerRuta() {
+            const ciudad_inicio = document.getElementById('ciudad_inicio').value;
+            const ciudad_final = document.getElementById('ciudad_final').value;
+
+            fetch('/get_routes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ start: ciudad_inicio, end: ciudad_final })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    trazarRuta(data.coordenadas_ruta, data.nodos_intermedios_encontrados, data.distancia);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Hubo un error al obtener la ruta.');
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 id="section1" style="font-family: 'Montserrat', sans-serif;">Maps ByZarco</h1>
+        <div class="selector">
+            <div>
+                <label for="ciudad_inicio" style="font-family: 'Montserrat', sans-serif;">Origen:</label>
+                <select id="ciudad_inicio">
+                    <option value="" disabled selected>Seleccione ciudad</option>
+                    {% for ciudad in ciudades %}
+                        <option value="{{ ciudad }}">{{ ciudad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="ciudad_final" style="font-family: 'Montserrat', sans-serif;">Destino:</label>
+                <select id="ciudad_final">
+                    <option value="" disabled selected>Seleccione ciudad</option>
+                    {% for ciudad in ciudades %}
+                        <option value="{{ ciudad }}">{{ ciudad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button onclick="obtenerRuta()" style="font-family: 'Montserrat', sans-serif;">Obtener ruta</button>
+        </div>
+        <div id="map" id="section3"></div>
+        <div class="info" id="section4"></div>
+
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcw26spqgM8EgBQGc-7ZCPaQx9QEuiNEI&callback=initMap" async defer></script>
+</body>
+</html>
