@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     background-color: #15202b; /* Fondo más oscuro */
-    overflow: hidden;
+    overflow: hidden; 
     position: relative;
     height: 100vh;
 }
