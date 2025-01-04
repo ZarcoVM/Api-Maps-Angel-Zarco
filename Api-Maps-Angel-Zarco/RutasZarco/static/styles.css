@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #15202b; /* Fondo más oscuro */
+    background-color: #15202b;
     overflow: hidden; 
     position: relative;
     height: 100vh;
