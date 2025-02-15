@@ -2,6 +2,7 @@ import math
 import random
 
 
+
 # Define las funciones de distancia y evaluación de ruta
 def distancia(coord1, coord2):
     lat1 = coord1[0]
